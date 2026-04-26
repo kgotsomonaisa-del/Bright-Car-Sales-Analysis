@@ -113,38 +113,67 @@ ORDER BY total_revenue DESC
 LIMIT 20;
 -----------------------------------------------------------------------------------------------
 --Single concentrated query
-SELECT 
+WITH base_metrics AS (
+  SELECT
+    sales_region,
+    state_name,
+    year AS vehicle_year,
+    body,
+    transmission,
+    odometer_band,
+    make,
+    model,
+    seller,
+    sale_month,
+    sale_month_name,
+    COUNT(*) AS transactions,
+    SUM(units_sold) AS units_sold,
+    SUM(total_revenue) AS total_revenue,
+    AVG(sellingprice) AS avg_selling_price,
+    PERCENTILE(sellingprice, 0.5) AS median_selling_price,
+    AVG(profit_margin_proxy_pct) AS avg_margin_proxy_pct,
+    AVG(odometer) AS avg_odometer,
+    AVG(condition) AS avg_condition,
+    SUM(price_gap_to_mmr) AS total_price_gap_to_mmr
+  FROM workspace.brightmotors.car_sales
+  GROUP BY ALL
+),
+global_kpis AS (
+  SELECT
+    'GLOBAL' AS metric_level,
+    COUNT(*) AS transactions,
+    ROUND(SUM(total_revenue), 2) AS total_revenue,
+    ROUND(AVG(sellingprice), 2) AS avg_selling_price,
+    ROUND(PERCENTILE(sellingprice, 0.5), 2) AS median_selling_price,
+    ROUND(AVG(profit_margin_proxy_pct), 2) AS avg_margin_proxy_pct,
+    COUNT(DISTINCT state) AS distinct_states,
+    COUNT(DISTINCT make) AS distinct_makes,
+    COUNT(DISTINCT model) AS distinct_models
+  FROM workspace.brightmotors.car_sales
+)
+SELECT
   sales_region,
   state_name,
-  year as vehicle_year,
+  vehicle_year,
   body,
-  sale_month,
-  sale_month_name,
   transmission,
   odometer_band,
   make,
   model,
-  COUNT(*) AS transactions,
-  ROUND(SUM(total_revenue), 2) AS total_revenue,
-  ROUND(AVG(sellingprice), 2) AS avg_selling_price,
-  ROUND(PERCENTILE(sellingprice, 0.5), 2) AS median_selling_price,
-  ROUND(AVG(profit_margin_proxy_pct), 2) AS avg_margin_proxy_pct,
-  COUNT(DISTINCT make) AS distinct_makes,
-  COUNT(DISTINCT model) AS distinct_models,
-  COUNT(DISTINCT state) AS distinct_states,
-  SUM(units_sold) AS units_sold,
-  COUNT(*) AS vehicles,
-  ROUND(AVG(odometer), 2) AS avg_odometer,
-  ROUND(AVG(condition), 2) AS avg_condition,
-  ROUND(SUM(price_gap_to_mmr), 2) AS total_price_gap_to_mmr
-FROM workspace.brightmotors.car_sales
-GROUP BY sale_month, 
-        sale_month_name, 
-        make, 
-        sales_region, 
-        state_name, 
-        model, 
-        year, 
+  seller,
+  sale_month,
+  sale_month_name,
+  transactions,
+  units_sold,
+  ROUND(total_revenue, 2) AS total_revenue,
+  ROUND(avg_selling_price, 2) AS avg_selling_price,
+  ROUND(median_selling_price, 2) AS median_selling_price,
+  ROUND(avg_margin_proxy_pct, 2) AS avg_margin_proxy_pct,
+  ROUND(avg_odometer, 2) AS avg_odometer,
+  ROUND(avg_condition, 2) AS avg_condition,
+  ROUND(total_price_gap_to_mmr, 2) AS total_price_gap_to_mmr
+FROM base_metrics
+ORDER BY total_revenue DESC, vehicle_year DESC, sale_month;
         odometer_band,
         body, 
         transmission
